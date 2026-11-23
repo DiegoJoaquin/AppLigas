@@ -17,13 +17,15 @@ function translate(error: string) {
 
 export async function signIn(formData: FormData) {
   const sb = await createClient();
-  const { error } = await sb.auth.signInWithPassword({
+  const { data, error } = await sb.auth.signInWithPassword({
     email: String(formData.get("email") ?? "").trim(),
     password: String(formData.get("password") ?? ""),
   });
   if (error) redirect(msg("/login", "error", translate(error.message)));
+  // Cada uno llega a lo suyo: el admin a su panel, el jugador a sus números, el resto a la liga
+  const { data: profile } = await sb.from("profiles").select("role, player_id").eq("id", data.user.id).maybeSingle();
   revalidatePath("/", "layout");
-  redirect("/perfil");
+  redirect(profile?.role === "admin" ? "/admin" : profile?.player_id ? "/perfil" : "/");
 }
 
 export async function signUp(formData: FormData) {
@@ -43,7 +45,7 @@ export async function signUp(formData: FormData) {
     redirect(msg("/login", "ok", "¡Cuenta creada! Te enviamos un correo para confirmarla. Después inicia sesión."));
   }
   revalidatePath("/", "layout");
-  redirect("/perfil?bienvenida=1");
+  redirect("/");
 }
 
 export async function signOut() {

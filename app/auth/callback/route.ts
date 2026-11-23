@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   if (code) {
     const sb = await createClient();
     const { error } = await sb.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(`${origin}/perfil?bienvenida=1`);
+    if (!error) return NextResponse.redirect(`${origin}/`);
   }
   return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("El enlace expiró o no es válido. Inicia sesión.")}`);
 }

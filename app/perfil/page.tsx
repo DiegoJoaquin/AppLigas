@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getPlayer, getSessionProfile } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
@@ -34,7 +35,7 @@ export default async function PerfilPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="space-y-8">
-      <Flash ok={sp.ok ?? (sp.bienvenida ? "¡Bienvenido a la Liga San José!" : undefined)} error={sp.error} />
+      <Flash ok={sp.ok ?? (undefined)} error={sp.error} />
 
       {player && (
         <section className="rounded-[24px] bg-mist p-5 sm:p-6">
@@ -50,17 +51,29 @@ export default async function PerfilPage({ searchParams }: { searchParams: Promi
       {!player && (
         <section>
           <h1 className="display text-[3.5rem] sm:text-[5rem]">Hola, {(profile.full_name ?? "hincha").split(" ")[0]}</h1>
-          <p className="mt-2 text-[17px] text-ink-2">Sigue la liga desde Fechas, Tabla y Estadísticas.</p>
-          <div className="mt-8 rounded-[24px] bg-mist p-6 sm:p-8">
-            <h2 className="h-section">¿Juegas en la liga?</h2>
-            {pending ? (
-              <p className="mt-3 rounded-xl bg-white px-4 py-3 text-[15px] text-ink-2">
-                Pediste vincularte como <b>{pending.full_name}</b>. Cuando un administrador lo apruebe vas a ver aquí tus goles, partidos y tarjetas.
-              </p>
-            ) : (
-              <>
-                <p className="mt-2 text-[15px] text-ink-2">Elige tu nombre para ver tus goles, partidos y tarjetas. Un administrador confirma que eres tú.</p>
-                <form action={requestPlayerLink} className="mt-5 flex flex-col gap-3 sm:flex-row">
+          <p className="mt-2 text-[17px] text-ink-2">
+            {profile.role === "admin" ? "Tienes acceso de administrador." : "Sigue la liga desde Fechas, Tabla y Estadísticas."}
+          </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {profile.role === "admin" && <Link href="/admin" className="btn-primary">Ir al panel de administración</Link>}
+            <Link href="/" className={profile.role === "admin" ? "btn-ghost" : "btn-primary"}>Ver la liga</Link>
+          </div>
+
+          {pending ? (
+            <p className="mt-8 rounded-[20px] bg-mist px-5 py-4 text-[15px] text-ink-2">
+              Pediste vincularte como <b>{pending.full_name}</b>. Cuando un administrador lo apruebe vas a ver aquí tus goles, partidos y tarjetas.
+            </p>
+          ) : (
+            <details className="group mt-8 rounded-[20px] bg-mist">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
+                <span>
+                  <span className="block text-[17px] font-bold">¿También juegas en la liga?</span>
+                  <span className="block text-[14px] text-muted">Opcional. Vincula tu ficha para ver tus goles y partidos.</span>
+                </span>
+                <span className="text-muted transition-transform group-open:rotate-180" aria-hidden>▾</span>
+              </summary>
+              <div className="px-5 pb-5">
+                <form action={requestPlayerLink} className="flex flex-col gap-3 sm:flex-row">
                   <select name="player_id" className="input" required defaultValue="">
                     <option value="" disabled>Busca tu nombre</option>
                     {[...byTeam.entries()].map(([team, ps]) => (
@@ -71,10 +84,10 @@ export default async function PerfilPage({ searchParams }: { searchParams: Promi
                   </select>
                   <SubmitButton className="btn-primary shrink-0" pendingText="Enviando…">Soy yo</SubmitButton>
                 </form>
-                <p className="mt-3 text-[13px] text-muted">¿No apareces? Pídele al delegado de tu equipo que te agregue.</p>
-              </>
-            )}
-          </div>
+                <p className="mt-3 text-[13px] text-muted">Un administrador confirma que eres tú. ¿No apareces? Pídele al delegado de tu equipo que te agregue.</p>
+              </div>
+            </details>
+          )}
         </section>
       )}
 
