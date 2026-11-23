@@ -1,6 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { LIGA_TAG } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { fromLocalInput } from "@/lib/format";
 import { fetchSofascoreMatch, parseSofascoreId } from "@/lib/sofascore";
@@ -23,6 +24,7 @@ const back = (path: string, key: "ok" | "error", text: string): never =>
   redirect(`${path}${path.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(text)}`);
 
 function done(path: string, text: string): never {
+  revalidateTag(LIGA_TAG);
   revalidatePath("/", "layout");
   return back(path, "ok", text);
 }
@@ -379,11 +381,13 @@ export async function unlinkPlayer(f: FormData) {
 export async function setTeamLogo(teamId: string, url: string | null) {
   const sb = await adminClient();
   await sb.from("teams").update({ logo_url: url }).eq("id", teamId);
+  revalidateTag(LIGA_TAG);
   revalidatePath("/", "layout");
 }
 
 export async function setPlayerPhoto(playerId: string, url: string | null) {
   const sb = await adminClient();
   await sb.from("players").update({ photo_url: url }).eq("id", playerId);
+  revalidateTag(LIGA_TAG);
   revalidatePath("/", "layout");
 }

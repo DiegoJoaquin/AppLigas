@@ -9,7 +9,7 @@ export const metadata = { title: "Crear cuenta" };
 export default async function RegistroPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const sp = await searchParams;
   return (
-    <AuthShell title="Crear cuenta" subtitle="Si eres jugador, después podrás vincular tu cuenta a tu ficha">
+    <AuthShell title="Crear cuenta" subtitle="Toma 10 segundos. Si juegas en la liga, después puedes vincular tu ficha.">
       <Flash error={sp.error} />
       <form action={signUp} className="space-y-4">
         <div>

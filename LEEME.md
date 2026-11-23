@@ -14,10 +14,10 @@ cuentas de usuario (hinchas y jugadores) y panel de administración. **Todo con 
 ## 1. Crear la base de datos (Supabase) — 5 min
 
 1. Entra a <https://supabase.com> → **Start your project** → crea una cuenta (puede ser con GitHub).
-2. **New project** → nombre `liga-san-jose`, región **South America (São Paulo)**, inventa una contraseña y guárdala.
+2. **New project** → nombre `liga-san-jose`, región **South America (São Paulo)** (la web en Vercel también corre en São Paulo; si eliges otra región en Supabase, cambia `vercel.json` para que coincidan), inventa una contraseña y guárdala.
 3. Menú izquierdo → **SQL Editor** → **New query** → pega TODO el contenido de `supabase/schema.sql` → **Run**.
 4. (Opcional, para ver la web con datos de prueba) Nueva query → pega `supabase/seed.sql` → **Run**.
-5. **Authentication → Sign In / Providers → Email**: déjalo activado. Si no quieres que los usuarios confirmen el correo, desactiva *Confirm email*.
+5. **Authentication → Sign In / Providers → Email**: déjalo activado y **desactiva *Confirm email*** → Save. Así las cuentas quedan listas al registrarse, sin correo de confirmación.
 6. **Project Settings → API** (o *Data API*): copia **Project URL** y la **anon public key**.
 
 ## 2. Probar en tu computador (opcional)

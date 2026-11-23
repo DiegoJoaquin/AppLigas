@@ -1,6 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { LIGA_TAG } from "@/lib/data";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
@@ -76,5 +77,6 @@ export async function setMyPhoto(url: string | null) {
   const sb = await createClient();
   const { error } = await sb.rpc("set_my_photo", { p_url: url ?? "" });
   if (error) throw new Error(error.message);
+  revalidateTag(LIGA_TAG);
   revalidatePath("/", "layout");
 }

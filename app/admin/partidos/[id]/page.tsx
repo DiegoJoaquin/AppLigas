@@ -7,6 +7,7 @@ import { Crest, Flash } from "@/components/ui";
 import { EventIcon } from "@/components/icons";
 import { SubmitButton } from "@/components/submit-button";
 import { LiveRefresh } from "@/components/live-refresh";
+import { PendingButton } from "@/components/pending-button";
 import { EVENT_LABEL, toLocalInput } from "@/lib/format";
 import type { Player, Team } from "@/lib/types";
 
@@ -174,10 +175,10 @@ function QuickPanel({ matchId, team, squad }: { matchId: string; team: Team; squ
       </select>
       <div className="mt-3 grid grid-cols-4 gap-2">
         <button name="type" value="gol" className={`${btn} col-span-2 !bg-ink !text-white !ring-ink`}><EventIcon type="gol" size={20} />Gol</button>
-        <button name="type" value="asistencia" className={btn}><EventIcon type="asistencia" size={20} />Asist.</button>
-        <button name="type" value="penal" className={btn}><EventIcon type="penal" size={20} />Penal</button>
-        <button name="type" value="amarilla" className={btn}><EventIcon type="amarilla" size={20} />Amarilla</button>
-        <button name="type" value="roja" className={btn}><EventIcon type="roja" size={20} />Roja</button>
+        <PendingButton name="type" value="asistencia" className={btn}><EventIcon type="asistencia" size={20} />Asist.</PendingButton>
+        <PendingButton name="type" value="penal" className={btn}><EventIcon type="penal" size={20} />Penal</PendingButton>
+        <PendingButton name="type" value="amarilla" className={btn}><EventIcon type="amarilla" size={20} />Amarilla</PendingButton>
+        <PendingButton name="type" value="roja" className={btn}><EventIcon type="roja" size={20} />Roja</PendingButton>
         <button name="type" value="autogol" className={`${btn} col-span-2`} title="Gol en contra del rival que suma a este equipo"><EventIcon type="autogol" size={20} />Autogol del rival</button>
       </div>
     </form>

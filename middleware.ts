@@ -20,8 +20,9 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  // Refresca la sesión si expiró
-  await supabase.auth.getUser();
+  // Refresca la sesión si expiró. getClaims valida el token sin pedirle nada
+  // al servidor de login (antes eran ~200 ms extra en cada clic).
+  await supabase.auth.getClaims();
   return response;
 }
 

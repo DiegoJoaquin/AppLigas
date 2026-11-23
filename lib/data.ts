@@ -1,14 +1,37 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
+import { createClient as createSupabase } from "@supabase/supabase-js";
 import { createClient } from "./supabase/server";
 import type {
   Match, Matchday, MatchEvent, Player, PlayerStat, Profile, Season, Standing, Team,
 } from "./types";
 
+/*
+ * Velocidad: los datos de la liga son iguales para todos, así que se guardan en
+ * caché en el servidor (etiqueta "liga"). Cada vez que un admin guarda algo, la
+ * caché se limpia al instante (revalidateTag en las acciones), así que nunca se
+ * ve un dato viejo después de cargarlo. Si se edita directo en Supabase, se
+ * renueva sola en 2 minutos.
+ */
+export const LIGA_TAG = "liga";
+let anon: ReturnType<typeof createSupabase> | null = null;
+function pub() {
+  if (!anon) {
+    anon = createSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  }
+  return anon;
+}
+function c<A extends unknown[], R>(name: string, fn: (...a: A) => Promise<R>) {
+  return cache(unstable_cache(fn, [name], { tags: [LIGA_TAG], revalidate: 120 })) as (...a: A) => Promise<R>;
+}
+
 export const MATCH_SELECT =
   "*, home:teams!matches_home_team_id_fkey(*), away:teams!matches_away_team_id_fkey(*)";
 
-export const getCurrentSeason = cache(async (): Promise<Season | null> => {
-  const sb = await createClient();
+export const getCurrentSeason = c("getCurrentSeason", async (): Promise<Season | null> => {
+  const sb = pub();
   const { data } = await sb
     .from("seasons").select("*")
     .order("is_current", { ascending: false })
@@ -17,14 +40,14 @@ export const getCurrentSeason = cache(async (): Promise<Season | null> => {
   return data as Season | null;
 });
 
-export async function getSeasons(): Promise<Season[]> {
-  const sb = await createClient();
+export const getSeasons = c("getSeasons", async (): Promise<Season[]> => {
+  const sb = pub();
   const { data } = await sb.from("seasons").select("*").order("created_at", { ascending: false });
   return (data ?? []) as Season[];
-}
+});
 
-export async function getMatchdays(seasonId: string): Promise<Matchday[]> {
-  const sb = await createClient();
+export const getMatchdays = c("getMatchdays", async (seasonId: string): Promise<Matchday[]> => {
+  const sb = pub();
   const { data } = await sb
     .from("matchdays")
     .select(`*, matches(${MATCH_SELECT})`)
@@ -35,10 +58,10 @@ export async function getMatchdays(seasonId: string): Promise<Matchday[]> {
     md.matches?.sort((a, b) => (a.kickoff ?? "").localeCompare(b.kickoff ?? ""))
   );
   return mds;
-}
+});
 
-export async function getMatchday(seasonId: string, number: number): Promise<Matchday | null> {
-  const sb = await createClient();
+export const getMatchday = c("getMatchday", async (seasonId: string, number: number): Promise<Matchday | null> => {
+  const sb = pub();
   const { data } = await sb
     .from("matchdays")
     .select(`*, matches(${MATCH_SELECT})`)
@@ -46,10 +69,10 @@ export async function getMatchday(seasonId: string, number: number): Promise<Mat
   const md = data as Matchday | null;
   md?.matches?.sort((a, b) => (a.kickoff ?? "").localeCompare(b.kickoff ?? ""));
   return md;
-}
+});
 
-export async function getMatch(id: string) {
-  const sb = await createClient();
+export const getMatch = c("getMatch", async (id: string) => {
+  const sb = pub();
   const [{ data: match }, { data: events }, { data: apps }] = await Promise.all([
     sb.from("matches").select(`${MATCH_SELECT}, matchday:matchdays(*)`).eq("id", id).maybeSingle(),
     sb.from("match_events").select("*, player:players(id, full_name, number, photo_url)")
@@ -64,10 +87,10 @@ export async function getMatch(id: string) {
       player_id: string; team_id: string; player: Pick<Player, "id" | "full_name" | "number" | "position" | "photo_url">;
     }[],
   };
-}
+});
 
-export async function getStandings(seasonId: string): Promise<Standing[]> {
-  const sb = await createClient();
+export const getStandings = c("getStandings", async (seasonId: string): Promise<Standing[]> => {
+  const sb = pub();
   const [{ data: rows }, { data: teams }] = await Promise.all([
     sb.from("standings").select("*").eq("season_id", seasonId),
     sb.from("teams").select("*"),
@@ -83,31 +106,31 @@ export async function getStandings(seasonId: string): Promise<Standing[]> {
     }
   }
   return list.sort((a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf || a.name.localeCompare(b.name));
-}
+});
 
-export async function getPlayerStats(seasonId: string): Promise<PlayerStat[]> {
-  const sb = await createClient();
+export const getPlayerStats = c("getPlayerStats", async (seasonId: string): Promise<PlayerStat[]> => {
+  const sb = pub();
   const { data } = await sb.from("player_stats").select("*").eq("season_id", seasonId);
   return (data ?? []) as PlayerStat[];
-}
+});
 
-export async function getTeams(): Promise<Team[]> {
-  const sb = await createClient();
+export const getTeams = c("getTeams", async (): Promise<Team[]> => {
+  const sb = pub();
   const { data } = await sb.from("teams").select("*").order("name");
   return (data ?? []) as Team[];
-}
+});
 
-export async function getTeam(id: string) {
-  const sb = await createClient();
+export const getTeam = c("getTeam", async (id: string) => {
+  const sb = pub();
   const [{ data: team }, { data: players }] = await Promise.all([
     sb.from("teams").select("*").eq("id", id).maybeSingle(),
     sb.from("players").select("*").eq("team_id", id).order("number", { nullsFirst: false }),
   ]);
   return { team: team as Team | null, players: (players ?? []) as Player[] };
-}
+});
 
-export async function getTeamMatches(teamId: string, seasonId: string): Promise<Match[]> {
-  const sb = await createClient();
+export const getTeamMatches = c("getTeamMatches", async (teamId: string, seasonId: string): Promise<Match[]> => {
+  const sb = pub();
   const { data } = await sb
     .from("matches")
     .select(`${MATCH_SELECT}, matchday:matchdays!inner(*)`)
@@ -116,17 +139,17 @@ export async function getTeamMatches(teamId: string, seasonId: string): Promise<
   return ((data ?? []) as Match[]).sort(
     (a, b) => (a.matchday?.number ?? 0) - (b.matchday?.number ?? 0)
   );
-}
+});
 
-export async function getPlayer(id: string) {
-  const sb = await createClient();
+export const getPlayer = c("getPlayer", async (id: string) => {
+  const sb = pub();
   const { data } = await sb.from("players").select("*, team:teams(*)").eq("id", id).maybeSingle();
   return data as Player | null;
-}
+});
 
 /** Historial de partidos de un jugador con sus goles/tarjetas en cada uno */
-export async function getPlayerHistory(playerId: string, teamId: string | null, seasonId: string) {
-  const sb = await createClient();
+export const getPlayerHistory = c("getPlayerHistory", async (playerId: string, teamId: string | null, seasonId: string) => {
+  const sb = pub();
   const [{ data: apps }, { data: events }] = await Promise.all([
     sb.from("appearances").select("match_id").eq("player_id", playerId),
     sb.from("match_events").select("*").eq("player_id", playerId),
@@ -147,19 +170,21 @@ export async function getPlayerHistory(playerId: string, teamId: string | null, 
     );
   }
   return { matches, events: (events ?? []) as MatchEvent[], teamId };
-}
+});
 
 export const getSessionProfile = cache(async () => {
   const sb = await createClient();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) return { user: null, profile: null as Profile | null };
-  const { data } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  return { user, profile: data as Profile | null };
+  // getClaims valida la sesión sin un viaje extra al servidor de login
+  const { data: claims } = await sb.auth.getClaims();
+  const sub = claims?.claims?.sub as string | undefined;
+  if (!sub) return { user: null, profile: null as Profile | null };
+  const { data } = await sb.from("profiles").select("*").eq("id", sub).maybeSingle();
+  return { user: { id: sub, email: (claims?.claims?.email as string | undefined) ?? null }, profile: data as Profile | null };
 });
 
 /** Todos los partidos de la temporada (con su fecha) */
-export const getSeasonMatches = cache(async (seasonId: string): Promise<Match[]> => {
-  const sb = await createClient();
+export const getSeasonMatches = c("getSeasonMatches", async (seasonId: string): Promise<Match[]> => {
+  const sb = pub();
   const { data } = await sb
     .from("matches")
     .select(`${MATCH_SELECT}, matchday:matchdays!inner(*)`)
@@ -189,8 +214,8 @@ export function computeForm(matches: Match[], n = 5): Map<string, FormResult[]> 
 }
 
 /** Enfrentamientos previos entre dos equipos (todas las temporadas) */
-export async function getHeadToHead(a: string, b: string, excludeId: string): Promise<Match[]> {
-  const sb = await createClient();
+export const getHeadToHead = c("getHeadToHead", async (a: string, b: string, excludeId: string): Promise<Match[]> => {
+  const sb = pub();
   const { data } = await sb
     .from("matches")
     .select(`${MATCH_SELECT}, matchday:matchdays(*)`)
@@ -200,4 +225,4 @@ export async function getHeadToHead(a: string, b: string, excludeId: string): Pr
     .order("kickoff", { ascending: false })
     .limit(6);
   return (data ?? []) as Match[];
-}
+});
